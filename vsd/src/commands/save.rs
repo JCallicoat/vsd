@@ -14,6 +14,7 @@ use reqwest::{
 use std::{
     path::{Path, PathBuf},
     sync::Arc,
+    time::Duration,
 };
 
 type CookieParams = Vec<CookieParam>;
@@ -82,7 +83,7 @@ pub struct Save {
     /// Skip checking and validation of site certificates.
     #[arg(long, help_heading = "Client Options")]
     pub no_certificate_checks: bool,
-    
+
     /// Set http(s) / socks proxy address for requests.
     #[arg(long, help_heading = "Client Options", value_parser = proxy_address_parser)]
     pub proxy: Option<Proxy>,
@@ -122,7 +123,7 @@ pub struct Save {
     /// Maximum number of retries to download an individual segment.
     #[arg(long, help_heading = "Download Options", default_value_t = 15)]
     pub retry_count: u8,
-    
+
     /// Download streams without merging them.
     /// Note that --output flag is ignored if this flag is used.
     #[arg(long, help_heading = "Download Options")]
@@ -132,6 +133,10 @@ pub struct Save {
     /// Number of threads should be in range 1-16 (inclusive).
     #[arg(short, long, help_heading = "Download Options", default_value_t = 5, value_parser = clap::value_parser!(u8).range(1..=16))]
     pub threads: u8,
+
+    /// Timeout in seconds for client operations.
+    #[arg(long, help_heading = "Download Options", default_value_t = 30)]
+    pub client_timeout: u64,
 }
 
 #[derive(Debug, Clone)]
@@ -254,6 +259,7 @@ impl Save {
     pub fn execute(self) -> Result<()> {
         let mut client_builder = Client::builder()
             .danger_accept_invalid_certs(self.no_certificate_checks)
+            .timeout(Duration::from_secs(self.client_timeout))
             .user_agent(self.user_agent)
             .cookie_store(true);
 

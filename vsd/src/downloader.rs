@@ -890,10 +890,21 @@ pub(crate) fn download(
             }
 
             pool.execute(move || {
-                if let Err(e) = thread_data.execute() {
-                    let _lock = thread_data.pb.lock().unwrap();
-                    println!("\n{}: {}", "error".colorize("bold red"), e);
-                    std::process::exit(1);
+                for _ in 0..retry_count {
+                    if let Err(e) = thread_data.execute() {
+                        if let Some(_) = e
+                            .to_string()
+                            .find("end of file before message length reached")
+                        {
+                            continue;
+                        } else {
+                            let _lock = thread_data.pb.lock().unwrap();
+                            println!("\n{}: {}", "error".colorize("bold red"), e);
+                            std::process::exit(1);
+                        }
+                    } else {
+                        break;
+                    }
                 }
             });
         }
@@ -1207,7 +1218,11 @@ impl ThreadData {
             let status = response.status();
 
             if status.is_client_error() || status.is_server_error() {
-                bail!("failed to fetch segments");
+                // bail!("failed to fetch segments");
+                self.pb
+                    .lock()
+                    .unwrap()
+                    .write(format!("fooking ell mate {}", status.as_str()))?;
             }
 
             let data = response.bytes()?.to_vec();
@@ -1255,6 +1270,14 @@ fn check_reqwest_error(error: &reqwest::Error) -> Result<String> {
         return Ok(format!("    {} {} (timeout)", request, url));
     } else if error.is_connect() {
         return Ok(format!("    {} {} (connection error)", request, url));
+    } else if error.is_request() {
+        return Ok(format!("    {} {} (request error)", request, url));
+    } else if error.is_decode() {
+        return Ok(format!("    {} {} (decoding body error)", request, url));
+    } else if error.is_body() {
+        return Ok(format!("    {} {} (reading body error)", request, url));
+    } else if error.is_status() {
+        return Ok(format!("    {} {} (status error)", request, url));
     }
 
     if let Some(status) = error.status() {
@@ -1270,6 +1293,7 @@ fn check_reqwest_error(error: &reqwest::Error) -> Result<String> {
             _ => bail!("download failed {} (HTTP {})", url, status),
         }
     } else {
-        bail!("download failed {}", url)
+        // bail!("download failed {}", url)
+        Ok(format!("fook is this mate {}", error))
     }
 }

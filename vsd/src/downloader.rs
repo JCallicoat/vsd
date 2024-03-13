@@ -512,8 +512,21 @@ pub(crate) fn download(
                     request = request.header(header::RANGE, range.as_header_value());
                 }
 
-                let response = request.send()?;
-                let bytes = response.bytes()?;
+                let response = match request.send() {
+                    Ok(response) => response,
+                    Err(e) => {
+                        let _lock = pb.write(format!("    Got an error ({}) retrying", e));
+                        continue;
+                    }
+                };
+                let bytes = match response.bytes() {
+                    Ok(response) => response,
+                    Err(e) => {
+                        let _lock = pb.write(format!("    Got an error ({}) retrying", e));
+                        continue;
+                    }
+                };
+
                 subtitles_data.extend_from_slice(&bytes);
             }
 
@@ -524,8 +537,21 @@ pub(crate) fn download(
                 request = request.header(header::RANGE, range.as_header_value());
             }
 
-            let response = request.send()?;
-            let bytes = response.bytes()?;
+            let response = match request.send() {
+                Ok(response) => response,
+                Err(e) => {
+                    let _lock = pb.write(format!("    Got an error ({}) retrying", e));
+                    continue;
+                }
+            };
+            let bytes = match response.bytes() {
+                Ok(response) => response,
+                Err(e) => {
+                    let _lock = pb.write(format!("    Got an error ({}) retrying", e));
+                    continue;
+                }
+            };
+
             subtitles_data.extend_from_slice(&bytes);
 
             if first_run {
@@ -784,8 +810,26 @@ pub(crate) fn download(
                     request = request.header(header::RANGE, range.as_header_value());
                 }
 
-                let response = request.send()?;
-                let bytes = response.bytes()?;
+                let response = match request.send() {
+                    Ok(response) => response,
+                    Err(e) => {
+                        let _lock = pb
+                            .lock()
+                            .unwrap()
+                            .write(format!("    Got an error ({}) retrying", e));
+                        continue;
+                    }
+                };
+                let bytes = match response.bytes() {
+                    Ok(response) => response,
+                    Err(e) => {
+                        let _lock = pb
+                            .lock()
+                            .unwrap()
+                            .write(format!("    Got an error ({}) retrying", e));
+                        continue;
+                    }
+                };
                 previous_map = Some(bytes.to_vec())
             }
 
@@ -897,6 +941,11 @@ pub(crate) fn download(
                             .to_string()
                             .find("end of file before message length reached")
                         {
+                            let _lock = thread_data
+                                .pb
+                                .lock()
+                                .unwrap()
+                                .write(format!("    Got an error ({}) retrying", e));
                             continue;
                         } else {
                             let _lock = thread_data.pb.lock().unwrap();

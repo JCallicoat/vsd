@@ -42,6 +42,7 @@ pub(crate) fn download(
     raw_prompts: bool,
     retry_count: u8,
     threads: u8,
+    segment_sleep: u64,
 ) -> Result<()> {
     let mut playlist_url = base_url
         .clone()
@@ -907,6 +908,7 @@ pub(crate) fn download(
                     }
                 }
             });
+            std::thread::sleep(std::time::Duration::from_secs(segment_sleep));
         }
 
         pool.join();

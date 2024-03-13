@@ -134,6 +134,10 @@ pub struct Save {
     #[arg(short, long, help_heading = "Download Options", default_value_t = 5, value_parser = clap::value_parser!(u8).range(1..=16))]
     pub threads: u8,
 
+    /// Time in seconds to sleep between downloading segments.
+    #[arg(long, help_heading = "Download Options", default_value_t = 0)]
+    pub segment_sleep: u64,
+
     /// Timeout in seconds for client operations.
     #[arg(long, help_heading = "Download Options", default_value_t = 30)]
     pub client_timeout: u64,
@@ -315,6 +319,7 @@ impl Save {
             self.raw_prompts,
             self.retry_count,
             self.threads,
+            self.segment_sleep,
         )?;
 
         Ok(())
